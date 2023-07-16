@@ -6,7 +6,7 @@ CREATE PROCEDURE ComputeAverageWeightedScoreForUser(
   IN user_id INT
 )
 BEGIN
-	DECLARE average_weighted_score DECIMAL(10, 2);
+	DECLARE average_weighted_score DECIMAL(10, 10);
 
   -- Compute the average weighted score for the user
   SELECT SUM(corrections.score * projects.weight) / SUM(projects.weight) INTO average_weighted_score
