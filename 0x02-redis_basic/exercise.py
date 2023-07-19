@@ -1,57 +1,107 @@
 #!/usr/bin/env python3
-"""0. Writing strings to Redis """
+"""
+Redis module
+"""
+import sys
+from functools import wraps
+from typing import Union, Optional, Callable
+from uuid import uuid4
 
 import redis
-import uuid
-from typing import Union, Callable
+
+UnionOfTypes = Union[str, bytes, int, float]
+
+
+def count_calls(method: Callable) -> Callable:
+    """
+    a system to count how many
+    times methods of the Cache class are called.
+    :param method:
+    :return:
+    """
+    key = method.__qualname__
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """
+        Wrap
+        :param self:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        self._redis.incr(key)
+        return method(self, *args, **kwargs)
+
+    return wrapper
+
+
+def call_history(method: Callable) -> Callable:
+    """
+    add its input parameters to one list
+    in redis, and store its output into another list.
+    :param method:
+    :return:
+    """
+    key = method.__qualname__
+    i = "".join([key, ":inputs"])
+    o = "".join([key, ":outputs"])
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        """ Wrapp """
+        self._redis.rpush(i, str(args))
+        res = method(self, *args, **kwargs)
+        self._redis.rpush(o, str(res))
+        return res
+
+    return wrapper
 
 
 class Cache:
     """
-    Create a Cache class
+    Cache redis class
     """
+
     def __init__(self):
         """
-        __init__ method - store an instance of the Redis client
-        _redis - private variable
-        using redis.Redis()
-        flush the instance using flushdb
+        constructor of the redis model
         """
-        self.__redis = redis.Redis()
-        self.__redis.flushdb()
+        self._redis = redis.Redis()
+        self._redis.flushdb()
 
-    def store(self, data: Union[str, bytes, int, float]) -> str:
-        """"
-        a store method that takes a data argument and returns a string
-        should generate a random key (e.g. using uuid),
-        store the input data in Redis using the random key
-        return the key
-        data can be a str, bytes, int or float.
+    @count_calls
+    @call_history
+    def store(self, data: UnionOfTypes) -> str:
         """
-        key = str(uuid.uuid4())
-        self.__redis.set(key, data)
+        generate a random key (e.g. using uuid),
+         store the input data in Redis using the
+          random key and return the key.
+        :param data:
+        :return:
+        """
+        key = str(uuid4())
+        self._redis.mset({key: data})
         return key
 
-    def get(self, key: str, fn: Callable = None) -> Union[str, bytes, int]:
+    def get(self, key: str, fn: Optional[Callable] = None) \
+            -> UnionOfTypes:
         """
-        a get method that take a key string argument
-        an optional Callable argument named fn
-        This callable will be used to convert the data
-        back to the desired format.
+        convert the data back
+        to the desired format
+        :param key:
+        :param fn:
+        :return:
         """
-        value = self.__redis.get(key)
-        if value is not None and fn is not None:
-            return fn(value)
-        return value
+        if fn:
+            return fn(self._redis.get(key))
+        data = self._redis.get(key)
+        return data
 
-    def get_str(self, key: str) -> str:
-        """
-        paremetize str with correct conversion function
-        """
-        return self.get(key, fn=lambda d: d.decode("utf-8"))
+    def get_int(self: bytes) -> int:
+        """get a number"""
+        return int.from_bytes(self, sys.byteorder)
 
-    def get_int(self, key: str) -> int:
-        """
-        parametize int with correct conversion function
-        """
-        return self.get(key, fn=int)
+    def get_str(self: bytes) -> str:
+        """get a string"""
+        return self.decode("utf-8")
