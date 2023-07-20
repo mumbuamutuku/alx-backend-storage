@@ -15,6 +15,6 @@ def update_topics(mongo_collection, name, topics):
 
     update = {"$set": {"topics": topics}}
 
-    res = mongo_collection.update_one(filter, update)
+    res = mongo_collection.update_many(filter, update)
 
     return res.modified_count > 0
