@@ -34,15 +34,14 @@ def log_stats():
     print(f"{status_logs} status check")
 
     print("IPs:")
-    sorted_ips = total_logs.aggregate(
-        [{"$group": {"_id": "$ip", "count": {"$sum": 1}}},
-         {"$sort": {"count": -1}}])
-    i = 0
+    pipeline = [
+        {"$group": {"_id": "$ip", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}  # Limit the result to the top 10 IPs
+    ]
+    sorted_ips = collection.aggregate(pipeline)
     for s in sorted_ips:
-        if i == 10:
-            break
         print(f"\t{s.get('_id')}: {s.get('count')}")
-        i += 1
 
 
 if __name__ == "__main__":
