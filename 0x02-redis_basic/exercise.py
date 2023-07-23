@@ -105,3 +105,17 @@ class Cache:
     def get_str(self: bytes) -> str:
         """get a string"""
         return self.decode("utf-8")
+
+    def replay(method: Callable) -> None:
+        """
+        Display the history of calls of a particular function.
+        :param method: The method to replay.
+        :return: None
+        """
+        key = method.__qualname__
+        inputs = cache._redis.lrange(f"{key}:inputs", 0, -1)
+        outputs = cache._redis.lrange(f"{key}:outputs", 0, -1)
+
+        print(f"{key} was called {len(inputs)} times:")
+        for input_args, output_res in zip(inputs, outputs):
+            print(f"{key}{input_args.decode()} -> {output_res.decode()}")
