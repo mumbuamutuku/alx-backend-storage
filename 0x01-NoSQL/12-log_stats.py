@@ -27,7 +27,7 @@ def log_stats():
     status_logs = collection.count_documents(
             {"method": "GET", "path": "/status"})
     """Display the statistics"""
-    print(f"Total logs: {total_logs}")
+    print(f"{total_logs} logs")
     print("Methods:")
     for method, count in zip(methods, method_stats):
         print(f"\tmethod {method}: {count}")
